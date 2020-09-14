@@ -71,7 +71,6 @@ We import the data iteratively, as it is divided over 50+ excel files. The folde
 ```{r Import and Combine Data}
 # Import data ####
 df <- do.call(rbind, lapply(Sys.glob("data/data_sept_2020/*.xls"), read_excel)) # make sure no other .xls files in target.
-df
 ```
 
 A list of all variables.
@@ -122,7 +121,10 @@ df_clean <- df %>%
   janitor::clean_names() %>%
   select(authors, `article_title`, `source_title`, abstract,
          `publication_year`, `times_cited_all_databases`,
-         `author_keywords`, `keywords_plus`, publication_date)
+         `author_keywords`, `keywords_plus`, publication_date) %>%
+  add_count(article_title) %>%
+  filter(n == 1) %>% # remove duplicates
+  select(-n)
 
 ```
 
@@ -332,11 +334,10 @@ df_clean %>%
 
 ```{r}
 fields <- df_clean %>%
-  mutate(field = ifelse(field == "Business" | field == "Management", "business/management", field),
-         field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
-         field = ifelse(field == "Communication" | field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
+  mutate(field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
+         field = ifelse(field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
   count(field, sort = T) %>%
-  top_n(6) %>%
+  top_n(7) %>%
   pull(field)
 ```
 
@@ -344,8 +345,7 @@ Prepare final table.
 
 ```{r}
 df_clean_final <- df_clean %>%
-  mutate(field = ifelse(field == "Business" | field == "Management", "business/management", field),
-         field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
+  mutate(field = ifelse(field =="International Relations" | field == "Public Administration", "Political Science", field),
          field = ifelse(field == "Communication" | field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
   filter(field %in% fields) %>%
   select(abstract, field, months_since_first_pub)
@@ -357,7 +357,7 @@ df_clean_final %>%
 
 ```
 
-The data set has now been reduced to 12393 articles. 
+The data set has now been reduced to `r nrow(df_clean_final)` articles. 
 
 I will now first do some exploratory word-level analysis. This includes calculating the _tf_idf_ and the weighted log-odds of the terms. Stop words are obviously removed prior to the calculations. 
 
@@ -455,20 +455,40 @@ df_prep <- textProcessor(df_clean_final$abstract,
                          metadata = df_clean_final,
                          verbose = F,
                          onlycharacter = T,
-                         customstopwords = custom_stopwords,
-                         stem = F)
+                         stem = F,
+                         removepunctuation = T,
+                         removenumbers = T)
+```
 
+
+```{r}
 out <- prepDocuments(df_prep$documents,
                      df_prep$vocab,
                      df_prep$meta,
                      verbose = F,
-                     lower.thresh = 5,
-                     upper.thresh = floor(nrow(df_clean_final) * .9))
+                     lower.thresh = 35,
+                     upper.thresh = floor(nrow(df_clean_final) * .2)) # removes 12 most common words
 
 docs <- out$documents
 vocab <- out$vocab 
 meta <- out$meta
 ```
+
+
+Check which words were removed
+```{r}
+df_clean_final %>%
+  unnest_tokens(word, abstract) %>%
+  anti_join(stop_words) %>%
+  count(word, sort = T) %>%
+  rename(value = word, count = n) %>%
+  left_join(as_tibble(out$words.removed) %>% add_count(value)) %>% filter (!is.na(n)) %>%
+  select(-n) %>%
+  head(20) %>%
+  kable(caption = "Top 20 words removed due to (in)frequency") %>%
+  kable_classic("striped", full_width = F)
+```
+
 
 Determine what a reasonable number of topics is.
 
@@ -477,6 +497,12 @@ plan(multiprocess)
 
 k <- c(5, 10, 20, 40, 60, 80, 100, 120, 150, 200)
 many_models <- tibble(K = k) %>%
+  mutate(topic_model = future_map(K, ~stm(documents = out$documents, 
+                                          vocab = out$vocab, data = out$meta, K = .,
+                                          prevalence = ~ field + s(months_since_first_pub),
+                                          verbose = FALSE)))
+
+many_models_LDA <- tibble(K = k) %>%
   mutate(topic_model = future_map(K, ~stm(documents = out$documents, 
                                           vocab = out$vocab, data = out$meta, K = .,
                                           prevalence = ~ field + s(months_since_first_pub),
@@ -528,16 +554,13 @@ k_result %>%
 ```
 
 ```{r eval = F}
-# creating topic model with 110 topics and three independent variables for topic prevalence.
-number_of_topics <- 110
+# extracting topic model with 100 topics and three two variables for topic prevalence.
+number_of_topics <- 100
 
-df_stm <- stm(documents = out$documents,
-              vocab = out$vocab,
-              K = number_of_topics,
-              prevalence = ~ field + s(months_since_first_pub),
-              data = out$meta,
-              init.type = "Spectral",
-              verbose = F)
+df_stm <- k_result %>% 
+  filter(K == 60) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
 
 df_stm_lda <- stm(documents = out$documents,
               vocab = out$vocab,
@@ -635,15 +658,6 @@ gamma_terms %>%
 
 ```
 
-Topic Correlations.
-
-```{r}
-topic_cor <- topicCorr(df_stm, cutoff = .03)
-net <- network::network(topic_cor$posadj, directed = F)
-ggnet2(net, label = T)
-```
-
-
 LDA Vis.
 
 ```{r}
@@ -656,7 +670,7 @@ toLDAvis(df_stm_lda, docs)
 
 
 ```{r Covariates}
-number_of_topics <- 110
+number_of_topics <- tidy(df_stm) %>% pull(topic) %>% max()
 out$meta$field = as.factor(out$meta$field)
 prep <- estimateEffect(1:number_of_topics ~ field + s(months_since_first_pub),
                        df_stm,
@@ -675,9 +689,15 @@ result_reg %>%
   kable_classic("striped", full_width = F)
 ```
 
+```{r}
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+```
+
 
 ```{r eval = F}
-result_reg %>%
+topic_field_matched <- result_reg %>%
   filter(!str_detect(term, pattern = "s[(]"),
          p.value < 0.1) %>%
   mutate(term = ifelse(term == "(Intercept)", "Business", term),
@@ -685,10 +705,10 @@ result_reg %>%
   group_by(topic) %>%
   mutate(max_estimate = max(estimate)) %>%
   ungroup() %>%
-  filter(estimate == max_estimate) %>%
-  mutate(p.value = cell_spec(p.value,
-                         "html",
-                         color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
   kable(format = "html", escape = F) %>%
   kable_classic("striped", full_width = F)
 
@@ -704,6 +724,21 @@ topic_best_term <- result_reg %>%
 ```
 
 ```{r}
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+```
+
+
+
+Topic Correlations Network.
+
+```{r}
 net <- topicCorr(df_stm, cutoff = 0.05)
 net <- net$posadj
 net <- network::network(net, directed = F)
@@ -717,8 +752,10 @@ ggnet2(net, color = "term", palette = y, alpha = 0.75,
        size = 4, edge.alpha = 0.5,node.label = "topic",
        node.size = 5) +
   labs(title = "Topic Correlations",
-       subtitle = "Nodes indicate topics, edges indicate correlation between topics") 
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
 ```
+
+
 
 ```{r Temporality}
 plot(prep, "months_since_first_pub",
@@ -732,7 +769,35 @@ axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
 ```
 
 ```{r}
-labelTopics(df_stm, topics = c(31, 43))
+a <- labelTopics(df_stm, topics = c(1:60))
+
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
+```
+
+```{r}
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
+
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+```
+
+Topic Thoughts
+
+```{r}
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:60), texts = short_docs$abstract, n = 8)
 ```
 
 
