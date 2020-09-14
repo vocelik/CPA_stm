@@ -1,0 +1,28 @@
+@article{RN4204,
+   author = {Aarikka-Stenroos, L. and Sandberg, B. and Lehtimaki, T.},
+   title = {Networks for the commercialization of innovations: A review of how divergent network actors contribute},
+   journal = {Industrial Marketing Management},
+   volume = {43},
+   number = {3},
+   pages = {365-381},
+   ISSN = {0019-8501},
+   DOI = {10.1016/j.indmarman.2013.12.005},
+   url = {<Go to ISI>://WOS:000337661300003},
+   year = {2014},
+   type = {Journal Article}
+}
+
+@article{RN4462,
+   author = {Aaronson, S. A.},
+   title = {LIMITED PARTNERSHIP: BUSINESS, GOVERNMENT, CIVIL SOCIETY, AND THE PUBLIC IN THE EXTRACTIVE INDUSTRIES TRANSPARENCY INITIATIVE (EITI)},
+   journal = {Public Administration and Development},
+   volume = {31},
+   number = {1},
+   pages = {50-63},
+   ISSN = {0271-2075},
+   DOI = {10.1002/pad.588},
+   url = {<Go to ISI>://WOS:000287896200006},
+   year = {2011},
+   type = {Journal Article}
+}
+

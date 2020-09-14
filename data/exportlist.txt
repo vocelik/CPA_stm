@@ -1,0 +1,194 @@
+"Journal Article"	"L. Aarikka-Stenroos; B. Sandberg; T. Lehtimaki"	"2014"	"Networks for the commercialization of innovations: A review of how divergent network actors contribute"		"Industrial Marketing Management"			"43"		"3"	"365-381"					"Apr"	"Review"		"Networks for the commercialization of innovations: A review of how divergent network actors contribute"	"Ind. Mark. Manage."	"0019-8501"	"10.1016/j.indmarman.2013.12.005"												"WOS:000337661300003"			"Commercialization
+Innovation adoption
+Innovation diffusion
+Networks
+
+Relationships
+radical innovation
+diffusion
+market
+externalities
+performance
+
+resources
+adoption
+roles
+organizations
+competition
+Business & Economics"	"Successful commercialization is of great importance to innovative firms, and the recent literature has increasingly acknowledged that networks make a contribution not only to research and development but also to commercialization. However, research on networks facilitating the commercialization of innovations is scattered across divergent disciplines. A single company is rarely capable of generating successful diffusion in the commercialization of an innovation; success often requires cooperation between individual actors and organizations, and support from stakeholders. Consequently, the network aspect of commercialization is crucial. The aim of this study is thus to integrate the knowledge on how current research and business has employed the network approach in commercialization, and how contributors external to the innovator firm can facilitate the commercialization of innovations. On the basis of an extensive metatheoretical literature review and a qualitative and quantitative content analysis on articles linking networks explicitly to commercialization, this study produces a conceptual synthesis on network actors' contribution potential to commercialization. The analysis identified divergent network approaches to commercialization and gathered extant knowledge on "commercialization networks" from the multidisciplinary literature of innovation management, marketing, management, technology, entrepreneurship, and other relevant disciplines. Networks for commercialization have been linked to divergent network approaches, such as industrial networks, social networks, strategic networks, and entrepreneurship networks. According to the findings, customers and users, distributors, complementaries, suppliers, investors, associations, public organizations, and policy makers and regulators can support commercialization by performing practical commercialization tasks, facilitating innovation adoption/diffusion and creating markets. We also identified four modes of contribution. In terms of methods, qualitative research dominates current examinations on the topic while longitudinal research and investigations from multiple network actors' perspectives are almost absent. The results also indicate a need to develop coherent conceptualizations and accumulate knowledge that would strengthen the theoretical basis of the research. A pivotal contribution of this article is that it is the first to generate an integrative framework and a research agenda on networks for commercialization - a theme that is emergent, multifaceted, and crucial to innovative companies. (C) 2014 Elsevier Inc. All rights reserved."	"ISI Document Delivery No.: AJ4QQ
+Times Cited: 61
+Cited Reference Count: 78
+Cited References: 
+     Aarikka-Stenroos Leena, 2013, International Journal of Technology Marketing, V8, P177
+     Aarikka-Stenroos L, 2012, J BUS RES, V65, P198, DOI 10.1016/j.jbusres.2011.05.023
+     Aldrich H. E., 1986, ART SCI ENTREPRENEUR, P3
+     ARAUJO L, 1996, NETWORKS MARKETING, P63
+     Bercovitz J, 2011, RES POLICY, V40, P81, DOI 10.1016/j.respol.2010.09.008
+     Bohlmann JD, 2010, J PROD INNOVAT MANAG, V27, P741, DOI 10.1111/j.1540-5885.2010.00748.x
+     Burt R.S., 1992, STRUCTURAL HOLES SOC
+     Chakravorti B., 2004, Harvard Business Review, V82, P59
+     Chiesa V, 2011, J PROD INNOVAT MANAG, V28, P437, DOI 10.1111/j.1540-5885.2011.00818.x
+     Christensen C. M., 1992, PRODUCTION OPERATION, V1, P334, DOI DOI 10.1111/J.1937-5956.1992.TB00001.X
+     Coviello N., 1995, EUR J MARKETING, V29, P49, DOI DOI 10.1108/03090569510095008
+     Crawford M., 2008, NEW PRODUCTS MANAGEM
+     Danov M. A, 2003, J MARKETING THEORY P, V11, P59
+     de Reuver M, 2012, J BUS RES, V65, P347, DOI 10.1016/j.jbusres.2011.04.016
+     de Ven AHV, 2005, MIS QUART, V29, P365
+     Dhanaraj C, 2006, ACAD MANAGE REV, V31, P659, DOI 10.5465/AMR.2006.21318923
+     Di Benedetto CA, 1999, J PROD INNOVAT MANAG, V16, P530, DOI 10.1016/S0737-6782(99)00014-4
+     DOTY DH, 1994, ACAD MANAGE REV, V19, P230, DOI 10.2307/258704
+     Easingwood C, 2006, J PROD INNOVAT MANAG, V23, P498, DOI 10.1111/j.1540-5885.2006.00220.x
+     Freeman S, 2010, INT BUS REV, V19, P70, DOI 10.1016/j.ibusrev.2009.09.004
+     Garcia R, 2002, J PROD INNOVAT MANAG, V19, P110, DOI 10.1016/S0737-6782(01)00132-1
+     Goldenberg J, 2009, J MARKETING, V73, P1, DOI 10.1509/jmkg.73.2.1
+     GRANOVETTER MS, 1973, AM J SOCIOL, V78, P1360, DOI 10.1086/225469
+     Gulati R, 1998, STRATEGIC MANAGE J, V19, P293, DOI 10.1002/(SICI)1097-0266(199804)19:4<293::AID-SMJ982>3.0.CO;2-M
+     Hakansson H, 2002, J BUS RES, V55, P133, DOI 10.1016/S0148-2963(00)00148-X
+     Harrison D, 2008, RES POLICY, V37, P115, DOI 10.1016/j.respol.2007.10.001
+     Harryson SJ, 2008, J MANAGE STUD, V45, P745, DOI 10.1111/j.1467-6486.2008.00768.x
+     Harty C, 2010, TECHNOL ANAL STRATEG, V22, P297, DOI 10.1080/09537321003647339
+     Heikkinen MT, 2007, IND MARKET MANAG, V36, P909, DOI 10.1016/j.indmarman.2007.05.014
+     Hienerth C, 2011, J PROD INNOVAT MANAG, V28, P175, DOI 10.1111/j.1540-5885.2011.00869.x
+     Inganas M, 2007, INT J INNOV TECHNOL, V4, P457, DOI 10.1142/S0219877007001181
+     Iyengar R., 2011, GFK MARKETING INTELL, V3, P16, DOI DOI 10.2478/gfkmir-2014-0052
+     JARILLO JC, 1988, STRATEGIC MANAGE J, V9, P31, DOI 10.1002/smj.4250090104
+     Johanson J, 2009, J INT BUS STUD, V40, P1411, DOI 10.1057/jibs.2009.24
+     Johnson WHA, 2008, TECHNOVATION, V28, P495, DOI 10.1016/j.technovation.2008.02.007
+     Jolly V.J., 1997, COMMERCIALIZING NEW
+     KATZ ML, 1985, AM ECON REV, V75, P424
+     Kogut B, 2000, STRATEGIC MANAGE J, V21, P405, DOI 10.1002/(SICI)1097-0266(200003)21:3<405::AID-SMJ103>3.0.CO;2-5
+     Krippendorff K., 1980, CONTENT ANAL INTRO I
+     Latour Bruno, 2005, REASSEMBLING SOCIAL
+     LAW J, 1992, SYST PRACTICE, V5, P379, DOI 10.1007/BF01059830
+     Lettl C, 2008, IEEE T ENG MANAGE, V55, P219, DOI 10.1109/TEM.2008.919717
+     MOHR J, 2001, MARKETING HIGH TECHN
+     Molina-Castillo FJ, 2011, J PROD INNOVAT MANAG, V28, P915, DOI 10.1111/j.1540-5885.2011.00847.x
+     Moller K, 2007, IND MARKET MANAG, V36, P895, DOI 10.1016/j.indmarman.2007.05.016
+     Moller K, 2009, IND MARKET MANAG, V38, P450, DOI 10.1016/j.indmarman.2008.02.009
+     More R. A., 1983, Business Quarterly, V48, P110
+     Mouzas S, 2007, J BUS IND MARK, V22, P62, DOI 10.1108/08858620710722833
+     Mu JF, 2011, R&D MANAGE, V41, P337, DOI 10.1111/j.1467-9310.2011.00650.x
+     Partanen J., 2011, ENTREP THEORY PRACT, P1
+     Perks H, 2011, IND MARKET MANAG, V40, P1224, DOI 10.1016/j.indmarman.2011.10.005
+     Pittaway L, 2004, INT J MANAG REV, V5-6, P137, DOI 10.1111/j.1460-8545.2004.00101.x
+     Powell WW, 2005, AM J SOCIOL, V110, P1132, DOI 10.1086/421508
+     Prebble DR, 2008, R&D MANAGE, V38, P311, DOI 10.1111/j.1467-9310.2008.00517.x
+     Prenkert F, 2012, J BUS RES, V65, P207, DOI 10.1016/j.jbusres.2011.05.024
+     Robertson M, 1996, J MANAGE STUD, V33, P333, DOI 10.1111/j.1467-6486.1996.tb00805.x
+     Rogers E. M., 1983, DIFFUSION INNOVATION
+     Schumpeter J., 1934, THEORY EC DEV INQUIR
+     Sillanpaa A, 2009, RES POLICY, V38, P871, DOI 10.1016/j.respol.2009.01.001
+     Singh G, 2007, J MANAGE INQUIRY, V16, P319, DOI 10.1177/1056492607305894
+     Snow CC, 2011, J PROD INNOVAT MANAG, V28, P3, DOI 10.1111/j.1540-5885.2010.00777.x
+     Song M, 2009, J PROD INNOVAT MANAG, V26, P291, DOI 10.1111/j.1540-5885.2009.00659.x
+     Story V, 2009, J MARKET MANAG-UK, V25, P461, DOI 10.1362/026725709X461803
+     Story V, 2011, IND MARKET MANAG, V40, P952, DOI 10.1016/j.indmarman.2011.06.025
+     Stuart TE, 2007, RES POLICY, V36, P477, DOI 10.1016/j.respol.2007.02.016
+     Talke K, 2010, J PROD INNOVAT MANAG, V27, P537, DOI 10.1111/j.1540-5885.2010.00734.x
+     TIDD J, 1995, J PROD INNOVAT MANAG, V12, P307, DOI 10.1016/0737-6782(95)00026-P
+     Tolfree David, 2008, International Journal of Technology Transfer and Commercialisation, V7, P284, DOI 10.1504/IJTTC.2008.021028
+     Tolstoy D, 2010, TECHNOVATION, V30, P24, DOI 10.1016/j.technovation.2009.06.004
+     Torraco R. J., 2005, HUMAN RESOURCE DEV R, V4, P356, DOI [DOI 10.1177/1534484305278283, 10.1177/1534484305278283]
+     Troshani I, 2009, INT J MOB COMMUN, V7, P269, DOI 10.1504/IJMC.2009.023672
+     Uzzi B, 1996, AM SOCIOL REV, V61, P674, DOI 10.2307/2096399
+     van Eck PS, 2011, J PROD INNOVAT MANAG, V28, P187, DOI 10.1111/j.1540-5885.2011.00791.x
+     Van Fleet DD, 2000, J MANAGE, V26, P839, DOI 10.1016/S0149-2063(00)00060-X
+     Van Slyke C, 2007, EUR J INFORM SYST, V16, P270, DOI 10.1057/palgrave.ejis.3000680
+     Vowles N, 2011, J BUS RES, V64, P1162, DOI 10.1016/j.jbusres.2011.06.016
+     Weber R.P., 1985, BASIC CONTENT ANAL
+     Wince-Smith D., 1993, ECON DEV Q, V7, P12
+Aarikka-Stenroos, Leena Sandberg, Birgitta Lehtimaki, Tuula
+Lehtimaki, Tuula/AAK-2809-2020; Aarikka-Stenroos, Leena/O-7732-2016; Aarikka-Stenroos, Leena/A-6609-2015
+Lehtimaki, Tuula/0000-0001-5022-5695; Aarikka-Stenroos, Leena/0000-0001-9051-6059; Sandberg, Birgitta/0000-0001-8690-2360
+61
+5
+108
+Elsevier science inc
+New york
+1873-2062
+Si"		"<Go to ISI>://WOS:000337661300003"		"[Aarikka-Stenroos, Leena
+Sandberg, Birgitta] Univ Turku, Turku Sch Econ, Dept Mkt & Int Business, FI-20014 Turku, Finland. [Lehtimaki, Tuula] Univ Oulu, Dept Mkt, Oulu Business Sch, SF-90100 Oulu, Finland.
+Aarikka-Stenroos, L (corresponding author), Univ Turku, Turku Sch Econ, FI-20014 Turku, Finland.
+leena.aarikka-stenroos@utu.fi
+birgitta.sandberg@utu.fi
+tuula.lehtimaki@oulu.fi"								"English"
+"Journal Article"	"S. A. Aaronson"	"2011"	"LIMITED PARTNERSHIP: BUSINESS, GOVERNMENT, CIVIL SOCIETY, AND THE PUBLIC IN THE EXTRACTIVE INDUSTRIES TRANSPARENCY INITIATIVE (EITI)"		"Public Administration and Development"			"31"		"1"	"50-63"					"Feb"	"Article"		"LIMITED PARTNERSHIP: BUSINESS, GOVERNMENT, CIVIL SOCIETY, AND THE PUBLIC IN THE EXTRACTIVE INDUSTRIES TRANSPARENCY INITIATIVE (EITI)"	"Public Adm. Dev."	"0271-2075"	"10.1002/pad.588"												"WOS:000287896200006"			"transparency
+partnership
+anti-corruption
+civil society
+extractive
+industry
+corporate-social-responsibility
+diffusion
+Development Studies
+Public Administration"	"This article assesses the Extractive Industries Transparency Initiative (EITI), a public-private partnership designed to help resource-rich countries avoid corruption in the management of extractive industry revenues. Thirty-two nations have adopted EITI, and the numbers of implementing nations are rapidly increasing. However, the EITI partnership is not as effective as it could be for three reasons. First, the partners (governments, civil society, and business) have different visions of EITI. Second, some implementing governments have not allowed civil society to participate fully in the process or have not consistently provided civil society with the information they need to hold their governments to account. In this regard it is a limited partnership. Third, in many participating countries, the public and legislators may not be aware of EITI. Thus, although public participation is essential to the success and potential positive spillovers of EITI, the public is essentially a silent partner, limiting the ability of the EITI to succeed as a counterweight to corruption. Copyright (C) 2011 John Wiley & Sons, Ltd."	"ISI Document Delivery No.: 728TA
+Times Cited: 58
+Cited Reference Count: 57
+Cited References: 
+     AARONSON S, 2009, 11 WORLD BANK
+     ALBUQUERQUE C, 2004, FINAL REPORT COLUMBI
+     Austin J. E., 2000, NONPROFIT VOLUNTARY, V29, P69, DOI DOI 10.1177/089976400773746346
+     Blowfield M, 2005, INT AFF, V81, P499, DOI 10.1111/j.1468-2346.2005.00465.x
+     Brinkerhoff JM, 2002, PUBLIC ADMIN DEVELOP, V22, P19, DOI 10.1002/pad.203
+     Brunetti A, 2003, J PUBLIC ECON, V87, P1801, DOI 10.1016/S0047-2727(01)00186-4
+     BRYAN S, 2008, TRANSPARENCY ACCOUNT
+     Cosse Stephane, 2006, PDP062 IMF
+     DARBY S, 2007, ADV EITI MINING SECT
+     Dobbin F, 2007, ANNU REV SOCIOL, V33, P449, DOI 10.1146/annurev.soc.33.090106.142507
+     *EITI, 2010, BUS GUID
+     *EITI, 2009, VAL FACT SHEET
+     *EITI, 2007, PREV ANN
+     Elkins Z, 2006, INT ORGAN, V60, P811, DOI 10.1017/S0020818306060279
+     FROMM C, 2010, FINANCE SELF POLICIN
+     Frynas JG, 2005, INT AFF, V81, P581, DOI 10.1111/j.1468-2346.2005.00470.x
+     GILES A, 2010, INT STUDIES Q, V54, P103
+     *GLOB WITN, 2009, EITI GLOB C EST RES
+     Goldwyn D. L, 2008, DRILLING CIVIL SOC G
+     GOLUB SS, 2003, OECD EC STUDIES, V35, P7
+     GOLUMB S, 2003, CARNEGIE ENDOWMENT R, V41
+     GUNARATNE N, 2008, SUNDAY TIMES 1214
+     Humphreys M, 2005, J CONFLICT RESOLUT, V49, P508, DOI 10.1177/0022002705277545
+     Humphreys M., 2007, ESCAPING RESOURCE CU
+     HUSEN M, 2010, COMMUNICATION 0126
+     *IIED WBCSD, 2002, MIN MIN SUST DEV, V205
+     *INT COUNC MIN MET, 2006, ICMM STAT EXTR IND T
+     ISLAM N, 2008, 0802 CIPE
+     Jensen Nathan M., 2006, NATION STATES MULTIN
+     Johnston M., 2004, 3466 WORLD BANK
+     KARL T, 1997, PARADOX PLENTY OIL B
+     Keohane RO, 2002, J LEGAL STUD, V31, pS307, DOI 10.1086/340089
+     Klitgaard R. E., 1988, CONTROLLING CORRUPTI
+     Lambsdorff J. G, 2007, I EC CORRUPTION REFO
+     Li Q, 2009, COMP POLIT STUD, V42, P1098, DOI 10.1177/0010414009331723
+     *NACE, 2006, CIV SOC COMM IMPL EI
+     Otto J., 2006, MINING ROYALTIES GLO
+     RAVAT A, 2008, COMMUNICATION 0422
+     Rodrik Dani, 2004, 2 CESIFO DICE
+     Ross ML, 2001, WORLD POLIT, V53, P325, DOI 10.1353/wp.2001.0011
+     RUBIN N, 2009, WORKSH POORL GOV RES
+     Sandholtz W, 2003, INT ORGAN, V57, P761, DOI 10.1017/S0020818303574045
+     SAYEH AM, 2008, COMMUNICATION 0404
+     SLIM H, 2002, INT M GLOB TRENDS HU
+     STAPENHURST R, 1999, CURBING CORRUPTION M
+     STRONGMAN J, 2010, EITI BLOG 0721
+     TIMBERG C, 2008, WASHINGTON POST 0411, pA16
+     *TRANSP INT, 2010, 12010 TRANSP INT
+     UNCTAD, 2007, WORLD INV REP TRANSN
+     *UNDP, 2004, RIGHT INF PRACT GUID
+     VANDERVEER J, 2009, EITI GLOB C EST RES
+     Wei SJ, 2000, REV ECON STAT, V82, P1, DOI 10.1162/003465300558533
+     *WORLD BANK, 2010, EITI MULT TRUST FUND
+     *WORLD BANK, 2010, EITI RES FRAM
+     *WORLD BANK, 2009, EXTR IND DEV SER, V12
+     World Bank, 2000, ANT TRANS CONTR POL
+     *WORLD BANK, 2006, AN FRAM CHALL MIN WE
+Aaronson, Susan Ariel
+58
+1
+42
+Wiley
+Hoboken
+1099-162x
+Si"		"<Go to ISI>://WOS:000287896200006"		"George Washington Univ, Washington, DC 20052 USA.
+Aaronson, SA (corresponding author), George Washington Univ, 1957 St NW,Suite 501, Washington, DC 20052 USA.
+saaronso@gwu.edu"								"English"
