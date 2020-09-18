@@ -25,16 +25,15 @@ h4.date { /* Header 4 - and the author and data headers use this too  */
 </style>
 
 ```{r setup, include=FALSE, message = F, echo = F}
-knitr::opts_chunk$set(echo = T, message = F, error = F,
-                      dpi = 300, fig.width = 6, fig.height = 4,
-                      warning = F)
+knitr::opts_chunk$set(echo = T, message = F, error = F, dpi = 300, fig.width = 8,
+                      fig.height = 6, warning = F)
 ```
 
 <body>
 
 __The__ following is a structural topic model analysis of abstract from academic articles on the relationship between politics and business published between 1990 and 2020. The articles were acquired through _Thomson Reuters Web of Knowledge_. The following keywords search was used:  
 
-<strong>TS = ( ("business", firm*, corporat*, compan*, enterpris*, entrepreneur*) AND (government*, bureaucra*, minist*, power, legislat*, judicia*, executiv*, elect*, public) ). </strong>  
+<strong>AB = ( (business\*,  OR firm\*  OR corporat\*  OR compan\*  OR enterpris\*  OR entrepreneur\*)  AND (government\*  OR bureaucra\*  OR minist\*  OR legislat\*  OR judicia\*  OR executiv\* ) . </strong>  
 
 This resulted in <strong>75.931 </strong> hits. I have thus far extracted the 30.000 most relevant (sorted by Web of Knowledge) Not all of these hits are relevant and/or suitable to the analysis, however. The dataset needs to be cleaned before it can be used in the structural topic model. 
 
@@ -60,7 +59,7 @@ library(scales)
 library(stm)
 library(tm)
 
-load("stm_sept_2020.RData")
+load("stm_final_data.RData")
 
 theme_set(theme_classic())
 ```
@@ -68,14 +67,14 @@ theme_set(theme_classic())
 
 We import the data iteratively, as it is divided over 50+ excel files. The folder containing the data should not include excel files other than the Web of Science data.
 
-```{r Import and Combine Data}
+```{r Import and Combine Data, echo = T}
 # Import data ####
 df <- do.call(rbind, lapply(Sys.glob("data/data_sept_2020/*.xls"), read_excel)) # make sure no other .xls files in target.
 ```
 
-A list of all variables.
 
-```{r}
+```{r eval = F}
+# A list of all variables.
 relevant_cols <- df %>%
   janitor::clean_names() %>%
   select(abstract, publication_year) %>%
@@ -113,8 +112,6 @@ df %>%
 rm(relevant_cols, relevant_row_nums)
 ```
 
-We can now select the columns that contain relevant information. 
-
 ```{r}
 # keep only the necessary columns
 df_clean <- df %>%
@@ -126,9 +123,10 @@ df_clean <- df %>%
   filter(n == 1) %>% # remove duplicates
   select(-n)
 
+rm(df)
 ```
 
-A small (N = 5) random sample from the data.
+A small random sample from the data.
 
 ```{r}
 df_clean %>%
@@ -142,32 +140,9 @@ df_clean %>%
 
 ```
 
-Exploring the citation variable.
 
-```{r eval = F}
-df_clean %>%
-  filter(`times_cited_all_databases` < 2000,
-         !is.na(`publication_year`)) %>%
-  ggplot(aes(x = `publication_year`, y = `times_cited_all_databases`)) +
-  geom_point(aes(color = `times_cited_all_databases` > 250), show.legend = F)
-
-df_clean %>%
-  filter(`times_cited_all_databases` < 250,
-         !is.na(`publication_year`)) %>%
-  ggplot(aes(x = `publication_year`, y = `times_cited_all_databases`)) +
-  geom_point(aes(color = `times_cited_all_databases` > 100), show.legend = F)
-
-df_clean %>%
-  filter(`times_cited_all_databases` < 100,
-         !is.na(`publication_year`)) %>%
-  ggplot(aes(x = `publication_year`, y = `times_cited_all_databases`)) +
-  geom_point(aes(color = `times_cited_all_databases` > 25), show.legend = F)
-
-```
-
-Creating boxplots and histogram of citation count.
-
-```{r}
+```{r eval = F} 
+# Creating boxplots and histogram of citation count.
 cite_boxplot <- df_clean %>%
   ggplot(aes(times_cited_all_databases)) +
   geom_boxplot(outlier.alpha = .7) +
@@ -205,12 +180,10 @@ grid.arrange(cite_hist, cite_hist_log,
              left = "Count",
              bottom = "Citation count")
 rm(cite_boxplot, cite_boxplot_log, cite_hist, cite_hist_log)
+# As we can see, taking the natural logarithm mitigates the skewness somewhat, but long right-tails remain. 
 ```
 
-As we can see, taking the natural logarithm mitigates the skewness somewhat, but long right-tails remain. 
-
----
-
+We now transform some variables and add others.
 ```{r Additional Variables and Join}
 # creating some additional variables
 df_clean <- df_clean %>%
@@ -238,7 +211,7 @@ df_clean <- df_clean %>%
          months_since_first_pub = months_since_first_pub %/% months(1) + 1) 
 ```
 
-Next, I import the journal data from the [Web of Science Master Journal List](https://mjl.clarivate.com/collection-list-downloads). I use the Social Sciences Citation Index (SSCI). Joining this dataframe on *df_clean* allows us to use the main field as metadata in the structural topic model. I will keep the 6 most common fields in the dataset.   
+Next, I import the journal data from the [Web of Science Master Journal List](https://mjl.clarivate.com/collection-list-downloads). I use the Social Sciences Citation Index (SSCI). Joining this dataframe on *df_clean* allows us to use the main field as metadata in the structural topic model. I will keep the 7 most common fields in the dataset.   
 
 ```{r}
 df_wos <- read_csv("data/wos-core_SSCI.csv") %>%
@@ -254,37 +227,31 @@ df_clean <- df_clean %>%
          field = str_remove(field, '[,].*'))
 
 rm(df_wos)
-```
 
-What are the most common fields?
-
-```{r}
 df_clean %>%
   count(field, sort = T, name = "count") %>%
-  top_n(6) %>%
-  kbl(caption = "The most common fields to research the relationship between business and politics.") %>%
+  top_n(7) %>%
+  kbl(caption = "The 7 most common fields to research the relationship between business and politics.") %>%
   kable_classic("striped", full_width = FALSE)
+
+fields <- df_clean %>%
+  mutate(field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
+         field = ifelse(field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
+  count(field, sort = T) %>%
+  top_n(7) %>%
+  pull(field)
+
 ```
+
+## Some descriptive exploration
 
 What are the most common journals?
 
 ```{r}
 df_clean %>%
-  count(source_title, sort = T, name = "count") %>%
-  top_n(20) %>%
-  mutate(source_title = str_to_title(source_title)) %>%
-  kbl(caption = "The most common journals to publish research on the relationship between business and politics.") %>%
-  kable_classic("striped", full_width = FALSE)
-```
-
-```{r}
-df_clean %>%
-  group_by(field, source_title) %>%
-  summarise(most_pop = n()) %>%
-  slice_max(most_pop, 5) %>%
-  ungroup() %>%
-  arrange(-most_pop) %>%
-  mutate(source_title = str_to_title(source_title)) %>%
+  count(source_title, sort = T, name = "number of publications") %>%
+  head(20) %>%
+  mutate(source_title = str_to_lower(source_title)) %>%
   kbl(caption = "The most common journals to publish research on the relationship between business and politics.") %>%
   kable_classic("striped", full_width = FALSE)
 ```
@@ -312,36 +279,34 @@ df_clean %>%
   separate(`keywords_plus`, sep = ";", into = "keywords") %>%
   mutate(keywords = tolower(keywords),
          keywords = str_replace_all(keywords, "-", " ")) %>%
-  count(field, keywords, sort = T, name = "count") %>%
+  group_by(field, keywords) %>%
+  summarise(count = n()) %>%
+  filter(count == max(count),
+         count > 1) %>%
+  arrange(-count) %>%
   head(25) %>%
   kbl(caption = "The most popular keywords by field.") %>%
   kable_classic("striped", full_width = FALSE) %>%
-  footnote(general = "Keywords Plus provided by Web of Science.")
+  footnote(general = "Keywords provided by Web of Science")
   
-
 df_clean %>%
   filter(!is.na(`author_keywords`)) %>%
   separate(`author_keywords`, sep = ";", into = "keywords") %>%
   mutate(keywords = tolower(keywords),
-         keywords = str_replace_all(keywords, "-", " "),
-         keywords = str_replace_all(keywords, "[(].*[)]", " ")) %>%
-  count(field, keywords, sort = T, name = "count") %>%
+         keywords = str_replace_all(keywords, "-", " ")) %>%
+  group_by(field, keywords) %>%
+  summarise(count = n()) %>%
+  filter(count == max(count),
+         count > 1) %>%
+  arrange(-count) %>%
   head(25) %>%
   kbl(caption = "The most popular keywords by field.") %>%
   kable_classic("striped", full_width = FALSE) %>%
   footnote(general = "Keywords provided by authors.")
+
 ```
 
-```{r}
-fields <- df_clean %>%
-  mutate(field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
-         field = ifelse(field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
-  count(field, sort = T) %>%
-  top_n(7) %>%
-  pull(field)
-```
-
-Prepare final table.
+We now recode some entries in the `field` variable. 
 
 ```{r}
 df_clean_final <- df_clean %>%
@@ -349,15 +314,17 @@ df_clean_final <- df_clean %>%
          field = ifelse(field == "Communication" | field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
   filter(field %in% fields) %>%
   select(abstract, field, months_since_first_pub)
-
-df_clean_final %>%
-  sample_n(size = 5) %>%
-  kbl(caption = "Final table with main meta data") %>%
-  kable_classic("striped", full_width = F) 
-
+  
+#df_clean_final <- df_clean_final %>%
+#  mutate(length = str_length(abstract)) %>%
+#  filter(length < 3000, 
+#         length > 500) %>%
+#  select(-length) # drops 305
 ```
 
 The data set has now been reduced to `r nrow(df_clean_final)` articles. 
+
+### world-level analysis
 
 I will now first do some exploratory word-level analysis. This includes calculating the _tf_idf_ and the weighted log-odds of the terms. Stop words are obviously removed prior to the calculations. 
 
@@ -366,7 +333,11 @@ I will now first do some exploratory word-level analysis. This includes calculat
 # extract the words out of the abstracts.
 df_words <- df_clean_final %>%
   unnest_tokens(word, abstract) %>%
-  anti_join(stop_words) 
+  anti_join(stop_words) %>%
+  filter(!str_detect(word, "\\d"),
+         !str_detect(word, "\\."),
+         str_length(word) > 2,
+         !word %in% c("xxx"))
 
 custom_stopwords <- df_words %>%
   count(word, sort = T) %>%
@@ -387,7 +358,6 @@ df_words_tf_idf %>%
   mutate(word = reorder_within(word, tf_idf, field)) %>%
   ggplot(aes(word, tf_idf, fill = field)) +
   geom_col(alpha = 0.8, show.legend = FALSE) +
-  scale_fill_grey() + 
   facet_wrap(~ field, scales = "free") +
   scale_x_reordered() +
   coord_flip() +
@@ -415,9 +385,9 @@ df_words_log_odds %>%
 rm(df_words, df_words_log_odds, df_words_tf_idf)
 ```
 
-Before proceeding with the topic model, I include some additional graphs to gain a deeper understanding of the structure of the dataset.
-
 ```{r Additional Graphs, eval = F}
+# Before proceeding with the topic model, I include some additional graphs
+# to gain a deeper understanding of the structure of the dataset.
 # plot variance in citation count per field and per type. 
 df_clean_final %>%
   ggplot(aes(reorder(field, times_cited_all_databases, median), times_cited_all_databases)) +
@@ -430,7 +400,7 @@ df_clean_final %>%
 
 # plot histogram of publications per type. 
 df_clean_final %>%
-  ggplot(aes(`year_since_pub`)) +
+  ggplot(aes(`months_since_first_pub`)) +
   geom_histogram(color = "white", bins = 30) +
   scale_fill_economist() +
   labs(y = NULL,
@@ -440,7 +410,7 @@ df_clean_final %>%
 
 # plot probability density of publications per type. 
 df_clean_final %>%
-  ggplot(aes(year_since_pub, ..density..)) +
+  ggplot(aes(months_since_first_pub, ..density..)) +
   geom_freqpoly() +
   scale_color_wsj() +
   labs(y = NULL,
@@ -448,9 +418,13 @@ df_clean_final %>%
        title = "Probability density of publications on CPA.") 
 ```
 
+## Structural Topic Model
+ 
 Now, I proceed with the structural topic model. The following steps are based on the _stm_ vignette by [Roberts et al. (2014).](https://cran.r-project.org/web/packages/stm/vignettes/stmVignette.pdf). I also apply some code written by [Julia Silge](https://juliasilge.com/blog/evaluating-stm/) which allows for helpful plots not available in the stm package.
 
-```{r STM}
+### Preprocessing
+
+```{r}
 df_prep <- textProcessor(df_clean_final$abstract,
                          metadata = df_clean_final,
                          verbose = F,
@@ -459,7 +433,6 @@ df_prep <- textProcessor(df_clean_final$abstract,
                          removepunctuation = T,
                          removenumbers = T)
 ```
-
 
 ```{r}
 out <- prepDocuments(df_prep$documents,
@@ -474,8 +447,7 @@ vocab <- out$vocab
 meta <- out$meta
 ```
 
-
-Check which words were removed
+Check which words were removed. We want to remove words that are very frequent and very infrequent. This improves topic model estimation and interpretation.
 ```{r}
 df_clean_final %>%
   unnest_tokens(word, abstract) %>%
@@ -489,30 +461,45 @@ df_clean_final %>%
   kable_classic("striped", full_width = F)
 ```
 
+### Setting K
 
-Determine what a reasonable number of topics is.
+Determine what a reasonable number of topics is. There is <strong>not</strong> a single optimal number of topics for any set of corpora, but we can apply certain estimation methods to find a range of reasonable topic models. We explore the full range and select a specific topic model on the basis of criteria we elaborate on in the article.
 
-```{r eval = F}
+```{r}
+k <- c(5, 10, 20, 40, 60, 80, 100, 120, 150, 200)
+```
+
+We have already imported the result of a previous run to avoid unnecessary computation. However, the following code was used to create the models:  
+
+```{r eval = F, echo = T}
+# Spectral algorithm takes +- 1.5 hours
 plan(multiprocess)
 
-k <- c(5, 10, 20, 40, 60, 80, 100, 120, 150, 200)
 many_models <- tibble(K = k) %>%
-  mutate(topic_model = future_map(K, ~stm(documents = out$documents, 
-                                          vocab = out$vocab, data = out$meta, K = .,
-                                          prevalence = ~ field + s(months_since_first_pub),
+  mutate(topic_model = future_map(K, ~stm(documents = out$documents, vocab = out$vocab, 
+                                          data = out$meta, K = . ,prevalence = ~ field + s(months_since_first_pub),
                                           verbose = FALSE)))
+
+# The LDA algorithm is rather slow so the following code can take 9+ hours to run.
+# The LDA algorithm requires many more iterations.
+plan(multiprocess)
 
 many_models_LDA <- tibble(K = k) %>%
   mutate(topic_model = future_map(K, ~stm(documents = out$documents, 
                                           vocab = out$vocab, data = out$meta, K = .,
                                           prevalence = ~ field + s(months_since_first_pub),
-                                          verbose = FALSE)))
-  
+                                          verbose = FALSE,
+                                          init.type = "LDA",
+                                          seed = 1234)))
 ```
+
+Inspect results. Notice how the Spectral algorithm requires far less (basically a magnitude) iterations. 
 
 ```{r}
 heldout <- make.heldout(documents = out$documents, vocab = out$vocab)
+```
 
+```{r eval = F}
 k_result <- many_models %>%
   mutate(exclusivity = map(topic_model, exclusivity),
          semantic_coherence = map(topic_model, semanticCoherence, out$documents),
@@ -524,6 +511,18 @@ k_result <- many_models %>%
          iterations = map_dbl(topic_model, function(x) length(x$convergence$bound)))
 
 k_result
+
+k_result_LDA <- many_models_LDA %>%
+  mutate(exclusivity = map(topic_model, exclusivity),
+         semantic_coherence = map(topic_model, semanticCoherence, out$documents),
+         eval_heldout = map(topic_model, eval.heldout, heldout$missing),
+         residual = map(topic_model, checkResiduals, out$documents),
+         bound =  map_dbl(topic_model, function(x) max(x$convergence$bound)),
+         lfact = map_dbl(topic_model, function(x) lfactorial(x$settings$dim$K)),
+         lbound = bound + lfact,
+         iterations = map_dbl(topic_model, function(x) length(x$convergence$bound)))
+
+k_result_LDA
 ```
 
 ```{r}
@@ -551,28 +550,45 @@ k_result %>%
   labs(x = "Semantic coherence",
        y = "Exclusivity",
        title = "Exclusivity and semantic coherence")
+
+k_result_LDA %>%
+  transmute(K,
+            `Lower bound` = lbound,
+            Residuals = map_dbl(residual, "dispersion"),
+            `Semantic coherence` = map_dbl(semantic_coherence, mean),
+            `Held-out likelihood` = map_dbl(eval_heldout, "expected.heldout")) %>%
+  gather(Metric, Value, -K) %>%
+  ggplot(aes(K, Value, color = Metric)) +
+  geom_line(size = 1.5, alpha = 0.7, show.legend = FALSE) +
+  facet_wrap(~Metric, scales = "free_y") +
+  labs(x = "K (number of topics)",
+       y = NULL,
+       title = "Model diagnostics by number of topics",
+       subtitle = "These diagnostics indicate that a good number of topics would be around 110")
+
+k_result_LDA %>%
+  select(K, exclusivity, semantic_coherence) %>%
+  unnest() %>%
+  mutate(K = as.factor(K)) %>%
+  ggplot(aes(semantic_coherence, exclusivity, color = K)) +
+  geom_point(size = 2, alpha = 0.7) +
+  labs(x = "Semantic coherence",
+       y = "Exclusivity",
+       title = "Exclusivity and semantic coherence")
+
+#rm(k_result, k_result_LDA)
 ```
 
-```{r eval = F}
-# extracting topic model with 100 topics and three two variables for topic prevalence.
-number_of_topics <- 100
+```{r}
+i <- 40
+```
 
+```{r}
 df_stm <- k_result %>% 
-  filter(K == 60) %>% 
+  filter(K == i) %>% 
   pull(topic_model) %>% 
   .[[1]]
 
-df_stm_lda <- stm(documents = out$documents,
-              vocab = out$vocab,
-              K = number_of_topics,
-              prevalence = ~ field + s(months_since_first_pub),
-              data = out$meta,
-              init.type = "LDA",
-              seed = 1234,
-              verbose = F)
-```
-
-```{r Visualization Spectral}
 df_stm_td <- tidy(df_stm)
 
 top_terms <- df_stm_td %>%
@@ -597,49 +613,7 @@ gamma_terms <- td_gamma %>%
          topic = reorder(topic, gamma))
 
 gamma_terms %>%
-  top_n(20, gamma) %>%
-  ggplot(aes(topic, gamma, label = terms)) +
-  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
-  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
-  coord_flip() +
-  scale_y_continuous(expand = c(0,0),
-                     limits = c(0, 0.09),
-                     labels = percent_format()) +
-  labs(x = NULL, y = expression(gamma),
-       title = "Top 20 topics by prevalence",
-       subtitle = "With the top words that contribute to each topic") 
-
-gamma_terms %>%
-  kable() %>%
-  kable_classic("striped", full_width = F)
-```
-
-```{r Visualization LDA}
-df_stm_td <- tidy(df_stm_lda)
-
-top_terms <- df_stm_td %>%
-  arrange(beta) %>%
-  group_by(topic) %>%
-  top_n(10, beta) %>%
-  arrange(-beta) %>%
-  select(topic, term) %>%
-  summarise(terms = list(term)) %>%
-  mutate(terms = map(terms, paste, collapse = ", ")) %>%
-  unnest(cols = c(terms))
-
-td_gamma <- tidy(df_stm_lda, matrix = "gamma",
-                 document_names = rownames(df_stm_lda))
-
-gamma_terms <- td_gamma %>%
-  group_by(topic) %>%
-  summarise(gamma = mean(gamma)) %>%
-  arrange(desc(gamma)) %>%
-  left_join(top_terms, by = "topic") %>%
-  mutate(topic = paste0("Topic ", topic),
-         topic = reorder(topic, gamma))
-
-gamma_terms %>%
-  top_n(20, gamma) %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
   ggplot(aes(topic, gamma, label = terms)) +
   geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
   geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
@@ -655,24 +629,12 @@ gamma_terms %>%
   kable() %>%
   kable_classic("striped", full_width = F)
 
-
-```
-
-LDA Vis.
-
-```{r}
+# LDA visualization
 toLDAvis(df_stm, docs)
-```
 
-```{r}
-toLDAvis(df_stm_lda, docs)
-```
-
-
-```{r Covariates}
-number_of_topics <- tidy(df_stm) %>% pull(topic) %>% max()
+# covariates
 out$meta$field = as.factor(out$meta$field)
-prep <- estimateEffect(1:number_of_topics ~ field + s(months_since_first_pub),
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
                        df_stm,
                        meta = out$meta,
                        uncertainty = "Global")
@@ -681,22 +643,11 @@ result_reg <- tidy(prep) %>%
   mutate(p.value = round(p.value, digits = 3),
          term = str_remove(term, "field"))
   
-result_reg %>%
-  mutate(p.value = cell_spec(p.value,
-                         "html",
-                         color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
-  kable(format = "html", escape = F) %>%
-  kable_classic("striped", full_width = F)
-```
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
 
-```{r}
-gamma_terms %>%
-  kable() %>%
-  kable_classic("striped", full_width = F)
-```
-
-
-```{r eval = F}
 topic_field_matched <- result_reg %>%
   filter(!str_detect(term, pattern = "s[(]"),
          p.value < 0.1) %>%
@@ -721,9 +672,7 @@ topic_best_term <- result_reg %>%
   mutate(max_estimate = max(estimate)) %>%
   ungroup() %>%
   filter(estimate == max_estimate)
-```
 
-```{r}
 topic_field_gamma <- gamma_terms %>%
   mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
   left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
@@ -732,13 +681,43 @@ topic_field_gamma <- gamma_terms %>%
 topic_field_gamma %>%
   kable() %>%
   kable_classic("striped", full_width = F)
-```
 
+a <- labelTopics(df_stm, topics = c(1:i))
 
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
 
-Topic Correlations Network.
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
 
-```{r}
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
+
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
 net <- topicCorr(df_stm, cutoff = 0.05)
 net <- net$posadj
 net <- network::network(net, directed = F)
@@ -753,32 +732,131 @@ ggnet2(net, color = "term", palette = y, alpha = 0.75,
        node.size = 5) +
   labs(title = "Topic Correlations",
        subtitle = "Nodes indicate topics, edges indicate correlation between topics")
-```
 
+#rm(net, topic_best_term)
 
-
-```{r Temporality}
-plot(prep, "months_since_first_pub",
-     method = "continuous", topics = c(31, 43),
-     model = z, printlegend = F,
-     xaxt = "n", xlab = "Time (1991-2020)")
-monthseq <- seq(from = as.Date("1990-01-01"),
-                to = as.Date("2021-12-31"), by = "month")
-monthnames <- months(monthseq)
-axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
 ```
 
 ```{r}
-a <- labelTopics(df_stm, topics = c(1:60))
+i <- 60
+```
+
+```{r}
+df_stm <- k_result %>% 
+  filter(K == i) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+df_stm_td <- tidy(df_stm)
+
+top_terms <- df_stm_td %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>%
+  unnest(cols = c(terms))
+
+td_gamma <- tidy(df_stm, matrix = "gamma",
+                 document_names = rownames(df_stm))
+
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+
+gamma_terms %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
+  ggplot(aes(topic, gamma, label = terms)) +
+  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  labs(x = NULL, y = expression(gamma),
+       title = "Top 20 topics by prevalence",
+       subtitle = "With the top words that contribute to each topic") 
+
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# LDA visualization
+toLDAvis(df_stm, docs)
+
+# covariates
+out$meta$field = as.factor(out$meta$field)
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+                       df_stm,
+                       meta = out$meta,
+                       uncertainty = "Global")
+
+result_reg <- tidy(prep) %>%
+  mutate(p.value = round(p.value, digits = 3),
+         term = str_remove(term, "field"))
+  
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
+
+topic_field_matched <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  kable(format = "html", escape = F) %>%
+  kable_classic("striped", full_width = F)
+
+topic_best_term <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate)
+
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+a <- labelTopics(df_stm, topics = c(1:i))
 
 topic_full_description <- tibble(Topic = a$topicnums,
        frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
        prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
        lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
        score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
-```
 
-```{r}
 topic_full_table <- topic_field_gamma %>%
   left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
   select(-terms)
@@ -786,19 +864,892 @@ topic_full_table <- topic_field_gamma %>%
 topic_full_table %>%
   kable() %>%
   kable_classic("striped", full_width = F)
-```
 
-Topic Thoughts
-
-```{r}
 short_docs <- meta %>%
     as_tibble() %>%
     select(abstract) %>%
     mutate(abstract = str_sub(abstract, 1, 800))
 
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
 
-topic_thoughts <- findThoughts(df_stm, topic = c(1:60), texts = short_docs$abstract, n = 8)
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
+net <- topicCorr(df_stm, cutoff = 0.05)
+net <- net$posadj
+net <- network::network(net, directed = F)
+net %v% "term" = as.character(topic_best_term$term)
+net %v% "topic" = as.character(topic_best_term$topic)
+
+y = RColorBrewer::brewer.pal(9, "Set3")
+names(y) = levels(as.factor(topic_best_term$term))
+
+ggnet2(net, color = "term", palette = y, alpha = 0.75,
+       size = 4, edge.alpha = 0.5,node.label = "topic",
+       node.size = 5) +
+  labs(title = "Topic Correlations",
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
+
+#rm(net, topic_best_term)
+
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
 ```
+
+```{r}
+i <- 80
+```
+
+```{r}
+df_stm <- k_result %>% 
+  filter(K == i) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+df_stm_td <- tidy(df_stm)
+
+top_terms <- df_stm_td %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>%
+  unnest(cols = c(terms))
+
+td_gamma <- tidy(df_stm, matrix = "gamma",
+                 document_names = rownames(df_stm))
+
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+
+gamma_terms %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
+  ggplot(aes(topic, gamma, label = terms)) +
+  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  labs(x = NULL, y = expression(gamma),
+       title = "Top 20 topics by prevalence",
+       subtitle = "With the top words that contribute to each topic") 
+
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# LDA visualization
+toLDAvis(df_stm, docs)
+
+# covariates
+out$meta$field = as.factor(out$meta$field)
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+                       df_stm,
+                       meta = out$meta,
+                       uncertainty = "Global")
+
+result_reg <- tidy(prep) %>%
+  mutate(p.value = round(p.value, digits = 3),
+         term = str_remove(term, "field"))
+  
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
+
+topic_field_matched <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  kable(format = "html", escape = F) %>%
+  kable_classic("striped", full_width = F)
+
+topic_best_term <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate)
+
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+a <- labelTopics(df_stm, topics = c(1:i))
+
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
+
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
+
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
+
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
+net <- topicCorr(df_stm, cutoff = 0.05)
+net <- net$posadj
+net <- network::network(net, directed = F)
+net %v% "term" = as.character(topic_best_term$term)
+net %v% "topic" = as.character(topic_best_term$topic)
+
+y = RColorBrewer::brewer.pal(9, "Set3")
+names(y) = levels(as.factor(topic_best_term$term))
+
+ggnet2(net, color = "term", palette = y, alpha = 0.75,
+       size = 4, edge.alpha = 0.5,node.label = "topic",
+       node.size = 5) +
+  labs(title = "Topic Correlations",
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
+
+#rm(net, topic_best_term)
+
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
+```
+
+```{r}
+i <- 100
+```
+
+```{r}
+df_stm <- k_result %>% 
+  filter(K == i) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+df_stm_td <- tidy(df_stm)
+
+top_terms <- df_stm_td %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>%
+  unnest(cols = c(terms))
+
+td_gamma <- tidy(df_stm, matrix = "gamma",
+                 document_names = rownames(df_stm))
+
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+
+gamma_terms %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
+  ggplot(aes(topic, gamma, label = terms)) +
+  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  labs(x = NULL, y = expression(gamma),
+       title = "Top 20 topics by prevalence",
+       subtitle = "With the top words that contribute to each topic") 
+
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# LDA visualization
+toLDAvis(df_stm, docs)
+
+# covariates
+out$meta$field = as.factor(out$meta$field)
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+                       df_stm,
+                       meta = out$meta,
+                       uncertainty = "Global")
+
+result_reg <- tidy(prep) %>%
+  mutate(p.value = round(p.value, digits = 3),
+         term = str_remove(term, "field"))
+  
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
+
+topic_field_matched <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  kable(format = "html", escape = F) %>%
+  kable_classic("striped", full_width = F)
+
+topic_best_term <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate)
+
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+a <- labelTopics(df_stm, topics = c(1:i))
+
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
+
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
+
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
+
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
+net <- topicCorr(df_stm, cutoff = 0.05)
+net <- net$posadj
+net <- network::network(net, directed = F)
+net %v% "term" = as.character(topic_best_term$term)
+net %v% "topic" = as.character(topic_best_term$topic)
+
+y = RColorBrewer::brewer.pal(9, "Set3")
+names(y) = levels(as.factor(topic_best_term$term))
+
+ggnet2(net, color = "term", palette = y, alpha = 0.75,
+       size = 4, edge.alpha = 0.5,node.label = "topic",
+       node.size = 5) +
+  labs(title = "Topic Correlations",
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
+
+#rm(net, topic_best_term)
+
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
+```
+
+```{r}
+i <- 120
+```
+
+```{r}
+df_stm <- k_result %>% 
+  filter(K == i) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+df_stm_td <- tidy(df_stm)
+
+top_terms <- df_stm_td %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>%
+  unnest(cols = c(terms))
+
+td_gamma <- tidy(df_stm, matrix = "gamma",
+                 document_names = rownames(df_stm))
+
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+
+gamma_terms %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
+  ggplot(aes(topic, gamma, label = terms)) +
+  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  labs(x = NULL, y = expression(gamma),
+       title = "Top 20 topics by prevalence",
+       subtitle = "With the top words that contribute to each topic") 
+
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# LDA visualization
+toLDAvis(df_stm, docs)
+
+# covariates
+out$meta$field = as.factor(out$meta$field)
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+                       df_stm,
+                       meta = out$meta,
+                       uncertainty = "Global")
+
+result_reg <- tidy(prep) %>%
+  mutate(p.value = round(p.value, digits = 3),
+         term = str_remove(term, "field"))
+  
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
+
+topic_field_matched <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  kable(format = "html", escape = F) %>%
+  kable_classic("striped", full_width = F)
+
+topic_best_term <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate)
+
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+a <- labelTopics(df_stm, topics = c(1:i))
+
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
+
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
+
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
+
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
+net <- topicCorr(df_stm, cutoff = 0.05)
+net <- net$posadj
+net <- network::network(net, directed = F)
+net %v% "term" = as.character(topic_best_term$term)
+net %v% "topic" = as.character(topic_best_term$topic)
+
+y = RColorBrewer::brewer.pal(9, "Set3")
+names(y) = levels(as.factor(topic_best_term$term))
+
+ggnet2(net, color = "term", palette = y, alpha = 0.75,
+       size = 4, edge.alpha = 0.5,node.label = "topic",
+       node.size = 5) +
+  labs(title = "Topic Correlations",
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
+
+#rm(net, topic_best_term)
+
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
+```
+
+```{r}
+i <- 150
+```
+
+```{r}
+df_stm <- k_result %>% 
+  filter(K == i) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+df_stm_td <- tidy(df_stm)
+
+top_terms <- df_stm_td %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>%
+  unnest(cols = c(terms))
+
+td_gamma <- tidy(df_stm, matrix = "gamma",
+                 document_names = rownames(df_stm))
+
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+
+gamma_terms %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
+  ggplot(aes(topic, gamma, label = terms)) +
+  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  labs(x = NULL, y = expression(gamma),
+       title = "Top 20 topics by prevalence",
+       subtitle = "With the top words that contribute to each topic") 
+
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# LDA visualization
+toLDAvis(df_stm, docs)
+
+# covariates
+out$meta$field = as.factor(out$meta$field)
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+                       df_stm,
+                       meta = out$meta,
+                       uncertainty = "Global")
+
+result_reg <- tidy(prep) %>%
+  mutate(p.value = round(p.value, digits = 3),
+         term = str_remove(term, "field"))
+  
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
+
+topic_field_matched <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  kable(format = "html", escape = F) %>%
+  kable_classic("striped", full_width = F)
+
+topic_best_term <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate)
+
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+a <- labelTopics(df_stm, topics = c(1:i))
+
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
+
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
+
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
+
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
+net <- topicCorr(df_stm, cutoff = 0.05)
+net <- net$posadj
+net <- network::network(net, directed = F)
+net %v% "term" = as.character(topic_best_term$term)
+net %v% "topic" = as.character(topic_best_term$topic)
+
+y = RColorBrewer::brewer.pal(9, "Set3")
+names(y) = levels(as.factor(topic_best_term$term))
+
+ggnet2(net, color = "term", palette = y, alpha = 0.75,
+       size = 4, edge.alpha = 0.5,node.label = "topic",
+       node.size = 5) +
+  labs(title = "Topic Correlations",
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
+
+#rm(net, topic_best_term)
+
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
+```
+
+
+```{r}
+i <- 200
+```
+
+```{r}
+df_stm <- k_result %>% 
+  filter(K == i) %>% 
+  pull(topic_model) %>% 
+  .[[1]]
+
+df_stm_td <- tidy(df_stm)
+
+top_terms <- df_stm_td %>%
+  arrange(beta) %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  arrange(-beta) %>%
+  select(topic, term) %>%
+  summarise(terms = list(term)) %>%
+  mutate(terms = map(terms, paste, collapse = ", ")) %>%
+  unnest(cols = c(terms))
+
+td_gamma <- tidy(df_stm, matrix = "gamma",
+                 document_names = rownames(df_stm))
+
+gamma_terms <- td_gamma %>%
+  group_by(topic) %>%
+  summarise(gamma = mean(gamma)) %>%
+  arrange(desc(gamma)) %>%
+  left_join(top_terms, by = "topic") %>%
+  mutate(topic = paste0("Topic ", topic),
+         topic = reorder(topic, gamma))
+
+gamma_terms %>%
+  top_n(floor(nrow(gamma_terms) * .3), gamma) %>%
+  ggplot(aes(topic, gamma, label = terms)) +
+  geom_col(aes(color = "black"), alpha = 0.8, show.legend = FALSE, color = "white") +
+  geom_text(hjust = 0, nudge_y = 0.0005, size = 3) +
+  coord_flip() +
+  scale_y_continuous(expand = c(0,0),
+                     limits = c(0, 0.09),
+                     labels = percent_format()) +
+  labs(x = NULL, y = expression(gamma),
+       title = "Top 20 topics by prevalence",
+       subtitle = "With the top words that contribute to each topic") 
+
+gamma_terms %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# LDA visualization
+toLDAvis(df_stm, docs)
+
+# covariates
+out$meta$field = as.factor(out$meta$field)
+prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+                       df_stm,
+                       meta = out$meta,
+                       uncertainty = "Global")
+
+result_reg <- tidy(prep) %>%
+  mutate(p.value = round(p.value, digits = 3),
+         term = str_remove(term, "field"))
+  
+# result_reg %>%
+#   mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+#   kable(format = "html", escape = F) %>%
+#   kable_classic("striped", full_width = F)
+
+topic_field_matched <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate) 
+
+topic_field_matched %>%
+  mutate(p.value = cell_spec(p.value, "html", color = ifelse(p.value <= 0.05, "blue", "red"))) %>%
+  kable(format = "html", escape = F) %>%
+  kable_classic("striped", full_width = F)
+
+topic_best_term <- result_reg %>%
+  filter(!str_detect(term, pattern = "s[(]"),
+         p.value < 0.1) %>%
+  mutate(term = ifelse(term == "(Intercept)", "Business", term),
+         term = ifelse(estimate < 0, "Unclear", term)) %>%
+  group_by(topic) %>%
+  mutate(max_estimate = max(estimate)) %>%
+  ungroup() %>%
+  filter(estimate == max_estimate)
+
+topic_field_gamma <- gamma_terms %>%
+  mutate(topic = as.factor(trimws(str_remove(topic, "Topic ")))) %>%
+  left_join(topic_field_matched %>% select(topic, term) %>% mutate(topic = as.factor(topic)) %>% rename(field = term)) %>%
+  select(topic, field, gamma, terms) 
+
+topic_field_gamma %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+a <- labelTopics(df_stm, topics = c(1:i))
+
+topic_full_description <- tibble(Topic = a$topicnums,
+       frex = as_tibble(a$frex) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       prob = as_tibble(a$prob) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       lift = as_tibble(a$lift) %>% unite(frex, V1:V7, sep = ", ") %>% pull(),
+       score = as_tibble(a$score) %>% unite(frex, V1:V7, sep = ", ") %>% pull())
+
+topic_full_table <- topic_field_gamma %>%
+  left_join(topic_full_description %>% janitor::clean_names() %>% mutate(topic = as.factor(topic))) %>%
+  select(-terms)
+
+topic_full_table %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+short_docs <- meta %>%
+    as_tibble() %>%
+    select(abstract) %>%
+    mutate(abstract = str_sub(abstract, 1, 800))
+
+topic_thoughts <- findThoughts(df_stm, topic = c(1:i), texts = short_docs$abstract, n = 1)
+
+topic_top_docs <- as_tibble(topic_thoughts$index) %>%
+  janitor::clean_names() %>%
+  pivot_longer(everything()) %>%
+  left_join(short_docs %>% mutate(value = row_number())) %>%
+  rename(topic = name, doc_index = value, short_abstract = abstract) %>%
+  mutate(topic = str_remove(topic, "topic_")) 
+
+table_final <- topic_full_table %>%
+  left_join(topic_top_docs) %>%
+  kable() %>%
+  kable_classic("striped", full_width = F)
+
+# network
+net <- topicCorr(df_stm, cutoff = 0.05)
+net <- net$posadj
+net <- network::network(net, directed = F)
+net %v% "term" = as.character(topic_best_term$term)
+net %v% "topic" = as.character(topic_best_term$topic)
+
+y = RColorBrewer::brewer.pal(9, "Set3")
+names(y) = levels(as.factor(topic_best_term$term))
+
+ggnet2(net, color = "term", palette = y, alpha = 0.75,
+       size = 4, edge.alpha = 0.5,node.label = "topic",
+       node.size = 5) +
+  labs(title = "Topic Correlations",
+       subtitle = "Nodes indicate topics, edges indicate correlation between topics")
+
+#rm(net, topic_best_term)
+
+# plot(prep, "months_since_first_pub",
+#      method = "continuous", topics = c(,),
+#      model = z, printlegend = F,
+#      xaxt = "n", xlab = "Time (1991-2020)")
+# monthseq <- seq(from = as.Date("1990-01-01"),
+#                 to = as.Date("2021-12-31"), by = "month")
+# monthnames <- months(monthseq)
+# axis(1,at = as.numeric(monthseq) - min(as.numeric(monthseq)))
+# 
+```
+
+
 
 
 
