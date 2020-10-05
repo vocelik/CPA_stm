@@ -60,14 +60,14 @@ library(scales)
 library(stm)
 library(tm)
 
-load("finalrun.RData")
+#load("finalrun.RData")
 
 theme_set(theme_classic())
 ```
 
 We import the data iteratively, as it is divided over 50+ excel files. The folder containing the data should not include excel files other than the Web of Science data.
 
-```{r Import and Combine Data, echo = T}
+```{r echo = T}
 # Import data ####
 df <- do.call(rbind, lapply(Sys.glob("data/data_sept_2020/*.xls"), read_excel)) # make sure no other .xls files in target.
 ```
@@ -122,21 +122,18 @@ df_clean <- df %>%
          issn) %>%
   add_count(article_title) %>%
   filter(n == 1) %>% # remove duplicates
-  select(-n)
-
-# remove rows with missing years and abstracts.
-df_clean <- df_clean %>%
+  select(-n) %>%
   filter(!is.na(`publication_year`),
          !is.na(abstract)) %>%
   mutate(ID = row_number(),
-         abstract = str_remove(abstract, "[(][C-c][)].*$"),
+         abstract = str_remove(abstract, "[(][C-c][)].*$"), # some abstracts have '(C) Elsevier' at the ending.
          abstract_Length = str_length(abstract))
 #rm(df)
 ```
 
 A small random sample from the data.
 
-```{r}
+```{r echo = F}
 df_clean %>%
   select(authors, `article_title`, `publication_year`, `times_cited_all_databases`,
          abstract) %>%
@@ -147,6 +144,7 @@ df_clean %>%
   footnote(general = "Rows were randomly selected.")
 ```
 
+As we can see, taking the natural logarithm mitigates the skewness somewhat, but long right-tails remain. 
 ```{r eval = F, echo = F} 
 # Creating boxplots and histogram of citation count.
 cite_boxplot <- df_clean %>%
@@ -154,43 +152,44 @@ cite_boxplot <- df_clean %>%
   geom_boxplot(outlier.alpha = .7) +
   coord_flip() +
   labs(x = NULL,
-       y = "citations")
+       y = NULL)
 
 cite_boxplot_log <- df_clean %>%
-  ggplot(aes(log(times_cited_all_databases))) +
+  ggplot(aes(times_cited_all_databases)) +
   geom_boxplot(outlier.alpha = .7) +
+  scale_x_log10(labels = comma) +
   coord_flip() +
   labs(x = NULL,
-       y = "log(citations)")
+       y = NULL)
 
 cite_hist <- df_clean %>%
   ggplot(aes(times_cited_all_databases)) +
   geom_histogram(color = "white") +
   labs(y = NULL,
-       x = "citations")
+       x = NULL)
 
 cite_hist_log <- df_clean %>%
-  ggplot(aes(log(times_cited_all_databases))) +
+  ggplot(aes(times_cited_all_databases)) +
   geom_histogram(color = "white") +
+  scale_y_log10(labels = comma) +
   labs(y = NULL,
-       x = "log(citations)")
+       x = NULL)
 
 grid.arrange(cite_boxplot, cite_boxplot_log,
              ncol = 2,
-             top = "Boxplot comparison of citations and log(citations).",
+             top = "Boxplot comparison of citations on regular and log scale.",
              left = "times cited")
 
 grid.arrange(cite_hist, cite_hist_log,
              ncol = 2,
-             top = "Histogram comparison of citations and log(citations).",
-             left = "Count",
-             bottom = "Citation count")
+             top = "Histogram comparison of citations on regular and log scale.",
+             left = "count",
+             bottom = "citation count")
 rm(cite_boxplot, cite_boxplot_log, cite_hist, cite_hist_log)
-# As we can see, taking the natural logarithm mitigates the skewness somewhat, but long right-tails remain. 
 ```
 
 We now transform some variables and add others.
-```{r Additional Variables and Join}
+```{r echo = F, eval = F}
 # creating some additional variables
 # df_clean_y <- df_clean %>%
 #   filter(!is.na(`publication_year`),
@@ -226,6 +225,13 @@ df_wos <- read_csv("data/wos-core_SSCI.csv") %>%
 df_clean <- df_clean %>%
   left_join(distinct(df_wos)) 
 
+df_clean %>%
+  filter(is.na(`Web of Science Categories`)) %>%
+  count(source_title, sort = T) %>%
+  head(10) %>%
+  kable(caption = "10 most common journals not matched with an academic field.") %>%
+  kable_styling(full_width = F)
+
 df_clean <- df_clean %>%
   filter(!is.na(`Web of Science Categories`)) %>%
   mutate(field = str_remove(`Web of Science Categories`, ' [.]*[ |.].*'),
@@ -235,9 +241,9 @@ rm(df_wos)
 
 df_clean %>%
   count(field, sort = T, name = "count") %>%
-  top_n(10) %>%
+  top_n(7) %>%
   kbl(caption = "The 7 most common fields to research the relationship between business and politics.") %>%
-  kable_classic("striped")
+  kable_classic("striped", full_width = F)
 
 fields <- df_clean %>%
   mutate(field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
@@ -245,8 +251,6 @@ fields <- df_clean %>%
   count(field, sort = T) %>%
   top_n(7) %>%
   pull(field)
-
-df_clean <- distinct(df_clean)
 ```
 
 ## Some descriptive exploration
