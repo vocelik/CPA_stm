@@ -41,6 +41,7 @@ This resulted in <strong>75.931 </strong> hits. I have thus far extracted the 30
 The following libraries are required for the analysis.
 
 ```{r Libraries}
+#setwd("/Users/vavaocel/Document/projects/CPA_stm")
 rm(list=ls())
 
 library(furrr)
@@ -75,7 +76,8 @@ df <- do.call(rbind, lapply(Sys.glob("data/data_sept_2020/*.xls"), read_excel)) 
 # A list of all variables.
 relevant_cols <- df %>%
   janitor::clean_names() %>%
-  select(abstract, publication_year) %>%
+  select(abstract, publication_year, article_title, times_cited_all_databases,
+         source_title, document_type) %>%
   names() 
 
 relevant_row_nums <- df %>%
@@ -95,7 +97,7 @@ df %>%
   kbl(caption = "All variables from the data set provided by WOS.") %>%
   kable_classic("striped", full_width = F) %>%
   row_spec(relevant_row_nums, bold = T) %>%
-  footnote(general = "Bold names are used in the structural topic model.",
+  footnote(general = "Bold names are suggestions for use in the structural topic model.",
            number = "The variable 'academic field' needs to be created.")
 
 df %>%
@@ -116,12 +118,20 @@ df_clean <- df %>%
   janitor::clean_names() %>%
   select(authors, `article_title`, `source_title`, abstract,
          `publication_year`, `times_cited_all_databases`,
-         `author_keywords`, `keywords_plus`, publication_date) %>%
+         `author_keywords`, `keywords_plus`, publication_date,
+         issn) %>%
   add_count(article_title) %>%
   filter(n == 1) %>% # remove duplicates
   select(-n)
 
-rm(df)
+# remove rows with missing years and abstracts.
+df_clean <- df_clean %>%
+  filter(!is.na(`publication_year`),
+         !is.na(abstract)) %>%
+  mutate(ID = row_number(),
+         abstract = str_remove(abstract, "[(][C-c][)].*$"),
+         abstract_Length = str_length(abstract))
+#rm(df)
 ```
 
 A small random sample from the data.
@@ -182,37 +192,36 @@ rm(cite_boxplot, cite_boxplot_log, cite_hist, cite_hist_log)
 We now transform some variables and add others.
 ```{r Additional Variables and Join}
 # creating some additional variables
-df_clean <- df_clean %>%
-  filter(!is.na(`publication_year`),
-         !is.na(abstract),
-         !is.na(publication_date)) %>%
-  mutate(ID = row_number(),
-         abstract_Length = str_length(abstract),
-         publication_date = case_when(publication_date == "JAN" ~ 1,
-                                      publication_date == "FEB" ~ 2,
-                                      publication_date == "MAR" ~ 3,
-                                      publication_date == "APR" ~ 4,
-                                      publication_date == "MAY" ~ 5,
-                                      publication_date == "JUN" ~ 6,
-                                      publication_date == "JUL" ~ 7,
-                                      publication_date == "AUG" ~ 8,
-                                      publication_date == "SEP" ~ 9,
-                                      publication_date == "OCT" ~ 10,
-                                      publication_date == "NOV" ~ 11,
-                                      publication_date == "DEC" ~ 12)) %>%
-  filter(!is.na(publication_date)) %>%
-  unite("date", publication_year, publication_date, sep = "-") %>%
-  mutate(date = paste(date, "01", sep = "-"), date = as.Date(date),
-         months_since_first_pub = interval(min(date), date),
-         months_since_first_pub = months_since_first_pub %/% months(1) + 1) 
+# df_clean_y <- df_clean %>%
+#   filter(!is.na(`publication_year`),
+#          !is.na(abstract),
+#          !is.na(publication_date)) %>%
+#   mutate(ID = row_number(),
+#          abstract_Length = str_length(abstract),
+#          publication_date = case_when(publication_date == "JAN" ~ 1,
+#                                       publication_date == "FEB" ~ 2,
+#                                       publication_date == "MAR" ~ 3,
+#                                       publication_date == "APR" ~ 4,
+#                                       publication_date == "MAY" ~ 5,
+#                                       publication_date == "JUN" ~ 6,
+#                                       publication_date == "JUL" ~ 7,
+#                                       publication_date == "AUG" ~ 8,
+#                                       publication_date == "SEP" ~ 9,
+#                                       publication_date == "OCT" ~ 10,
+#                                       publication_date == "NOV" ~ 11,
+#                                       publication_date == "DEC" ~ 12)) %>%
+#   filter(!is.na(publication_date)) %>%
+#   unite("date", publication_year, publication_date, sep = "-") %>%
+#   mutate(date = paste(date, "01", sep = "-"), date = as.Date(date),
+#          months_since_first_pub = interval(min(date), date),
+#          months_since_first_pub = months_since_first_pub %/% months(1) + 1) 
 ```
 
 Next, I import the journal data from the [Web of Science Master Journal List](https://mjl.clarivate.com/collection-list-downloads). I use the Social Sciences Citation Index (SSCI). Joining this dataframe on *df_clean* allows us to use the main field as metadata in the structural topic model. I will keep the 7 most common fields in the dataset.   
 
 ```{r}
 df_wos <- read_csv("data/wos-core_SSCI.csv") %>%
-  select(`Journal title`,`Web of Science Categories`) %>%
-  rename(`source_title` = `Journal title`)
+  select(source_title = `Journal title`,`Web of Science Categories`, issn = ISSN) 
 
 df_clean <- df_clean %>%
   left_join(distinct(df_wos)) 
@@ -226,7 +235,7 @@ rm(df_wos)
 
 df_clean %>%
   count(field, sort = T, name = "count") %>%
-  top_n(7) %>%
+  top_n(10) %>%
   kbl(caption = "The 7 most common fields to research the relationship between business and politics.") %>%
   kable_classic("striped")
 
@@ -237,6 +246,7 @@ fields <- df_clean %>%
   top_n(7) %>%
   pull(field)
 
+df_clean <- distinct(df_clean)
 ```
 
 ## Some descriptive exploration
@@ -305,12 +315,35 @@ df_clean %>%
 We now recode some entries in the `field` variable. 
 
 ```{r}
+tbl <-
+    list.files(pattern = "*.csv") %>% 
+    map_df(~read_csv(.)) %>%
+    janitor::clean_names() %>%
+    select(x2:x8) 
+
+colnames(tbl) <- as.character(as.vector(tbl[1,]))
+
+df_clean <- df_clean %>%
+    mutate(ISSN = issn) %>%
+    left_join(tbl) %>%
+    distinct() %>%
+    janitor::clean_names()
+
+rm(tbl)
+
 df_clean_final <- df_clean %>%
   mutate(field = ifelse(field =="International Relations" | field == "Public Administration", "Political Science", field),
          field = ifelse(field == "Communication" | field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
   filter(field %in% fields) %>%
-  select(abstract, field, months_since_first_pub)
-  
+  filter(!is.na(full_journal_title)) %>%
+  mutate(total_cites = str_remove(total_cites,"[,]"),
+         total_cites = as.numeric(total_cites),
+         journal_impact_factor = as.double(journal_impact_factor),
+         impact_factor_without_journal_self_cites = as.double(impact_factor_without_journal_self_cites),
+         x5_year_impact_factor = as.double(x5_year_impact_factor),
+         eigenfactor_score = as.double(eigenfactor_score)) 
+
+
 df_clean_final <- df_clean_final %>%
   mutate(length = str_length(abstract)) %>%
   filter(length < 3000, 
@@ -434,7 +467,7 @@ out <- prepDocuments(df_prep$documents,
                      df_prep$vocab,
                      df_prep$meta,
                      verbose = F,
-                     lower.thresh = 35,
+                     lower.thresh = 15,
                      upper.thresh = floor(nrow(df_clean_final) * .2)) # removes 12 most common words
 
 docs <- out$documents
@@ -461,7 +494,7 @@ df_clean_final %>%
 Determine what a reasonable number of topics is. There is <strong>not</strong> a single optimal number of topics for any set of corpora, but we can apply certain estimation methods to find a range of reasonable topic models. We explore the full range and select a specific topic model on the basis of criteria we elaborate on in the article.
 
 ```{r}
-k <- c(5, 10, 20, 40, 60, 80, 100, 120, 150, 200)
+k <- c(40, 70, 100, 150, 200)
 ```
 
 We have already imported the result of a previous run to avoid unnecessary computation. However, the following code was used to create the models:  
@@ -473,19 +506,19 @@ plan(multicore)
 many_models <- tibble(K = k) %>%
   mutate(topic_model = future_map(K, ~stm(documents = out$documents, vocab = out$vocab, 
                                           data = out$meta, K = . ,
-                                          prevalence = ~ field + s(months_since_first_pub), verbose = FALSE)))
+                                          prevalence = ~ field + s(publication_year) + s(times_cited_all_databases) + s(impact_factor_without_journal_self_cites), verbose = FALSE)))
 
 # The LDA algorithm is rather slow so the following code can take 9+ hours to run.
 # The LDA algorithm requires many more iterations.
-plan(multicore)
-
-many_models_LDA <- tibble(K = k) %>%
-  mutate(topic_model = future_map(K, ~stm(documents = out$documents, 
-                                          vocab = out$vocab, data = out$meta, K = .,
-                                          prevalence = ~ field + s(months_since_first_pub),
-                                          verbose = FALSE,
-                                          init.type = "LDA",
-                                          seed = 1234)))
+# plan(multicore)
+# 
+# many_models_LDA <- tibble(K = k) %>%
+#   mutate(topic_model = future_map(K, ~stm(documents = out$documents, 
+#                                           vocab = out$vocab, data = out$meta, K = .,
+#                                           prevalence = ~ field + s(publication_year) + s(times_cited_all_databases) + s(impact_factor_without_journal_self_cites),
+#                                           verbose = FALSE,
+#                                           init.type = "LDA",
+#                                          seed = 1234)))
 ```
 
 Inspect results. Notice how the Spectral algorithm requires far less (basically a magnitude) iterations. 
@@ -507,17 +540,17 @@ k_result <- many_models %>%
 
 k_result
 
-k_result_LDA <- many_models_LDA %>%
-  mutate(exclusivity = map(topic_model, exclusivity),
-         semantic_coherence = map(topic_model, semanticCoherence, out$documents),
-         eval_heldout = map(topic_model, eval.heldout, heldout$missing),
-         residual = map(topic_model, checkResiduals, out$documents),
-         bound =  map_dbl(topic_model, function(x) max(x$convergence$bound)),
-         lfact = map_dbl(topic_model, function(x) lfactorial(x$settings$dim$K)),
-         lbound = bound + lfact,
-         iterations = map_dbl(topic_model, function(x) length(x$convergence$bound)))
-
-k_result_LDA
+# k_result_LDA <- many_models_LDA %>%
+#   mutate(exclusivity = map(topic_model, exclusivity),
+#          semantic_coherence = map(topic_model, semanticCoherence, out$documents),
+#          eval_heldout = map(topic_model, eval.heldout, heldout$missing),
+#          residual = map(topic_model, checkResiduals, out$documents),
+#          bound =  map_dbl(topic_model, function(x) max(x$convergence$bound)),
+#          lfact = map_dbl(topic_model, function(x) lfactorial(x$settings$dim$K)),
+#          lbound = bound + lfact,
+#          iterations = map_dbl(topic_model, function(x) length(x$convergence$bound)))
+# 
+#k_result_LDA
 ```
 
 ```{r}
@@ -546,30 +579,30 @@ k_result %>%
        y = "Exclusivity",
        title = "Exclusivity and semantic coherence")
 
-k_result_LDA %>%
-  transmute(K,
-            `Lower bound` = lbound,
-            Residuals = map_dbl(residual, "dispersion"),
-            `Semantic coherence` = map_dbl(semantic_coherence, mean),
-            `Held-out likelihood` = map_dbl(eval_heldout, "expected.heldout")) %>%
-  gather(Metric, Value, -K) %>%
-  ggplot(aes(K, Value, color = Metric)) +
-  geom_line(size = 1.5, alpha = 0.7, show.legend = FALSE) +
-  facet_wrap(~Metric, scales = "free_y") +
-  labs(x = "K (number of topics)",
-       y = NULL,
-       title = "Model diagnostics by number of topics",
-       subtitle = "These diagnostics indicate that a good number of topics would be around 60-100")
-
-k_result_LDA %>%
-  select(K, exclusivity, semantic_coherence) %>%
-  unnest() %>%
-  mutate(K = as.factor(K)) %>%
-  ggplot(aes(semantic_coherence, exclusivity, color = K)) +
-  geom_point(size = 2, alpha = 0.7) +
-  labs(x = "Semantic coherence",
-       y = "Exclusivity",
-       title = "Exclusivity and semantic coherence")
+# k_result_LDA %>%
+#   transmute(K,
+#             `Lower bound` = lbound,
+#             Residuals = map_dbl(residual, "dispersion"),
+#             `Semantic coherence` = map_dbl(semantic_coherence, mean),
+#             `Held-out likelihood` = map_dbl(eval_heldout, "expected.heldout")) %>%
+#   gather(Metric, Value, -K) %>%
+#   ggplot(aes(K, Value, color = Metric)) +
+#   geom_line(size = 1.5, alpha = 0.7, show.legend = FALSE) +
+#   facet_wrap(~Metric, scales = "free_y") +
+#   labs(x = "K (number of topics)",
+#        y = NULL,
+#        title = "Model diagnostics by number of topics",
+#        subtitle = "These diagnostics indicate that a good number of topics would be around 60-100")
+# 
+# k_result_LDA %>%
+#   select(K, exclusivity, semantic_coherence) %>%
+#   unnest() %>%
+#   mutate(K = as.factor(K)) %>%
+#   ggplot(aes(semantic_coherence, exclusivity, color = K)) +
+#   geom_point(size = 2, alpha = 0.7) +
+#   labs(x = "Semantic coherence",
+#        y = "Exclusivity",
+#        title = "Exclusivity and semantic coherence")
 
 #rm(k_result, k_result_LDA)
 ```
@@ -579,7 +612,7 @@ k_result_LDA %>%
 Now, we proceed to evaluate the topic models. For each run in `k` from 40 onward, we plot the 30% most prevalane topic and their top terms. In addition, we run regression analysis on the topic prevalence to determine to what field the topic belongs. We then create tables with each topic, its gamma, its top terms based on four different measurements: highest prob, FEX, Score, and Lift. For details on these measurements, see the STM vignette. Finally, we search the document that best fits a topic and include this in the table as well. Finally, we create a network graph where nodes denote topics and edges denote correlation < 0.05. We also use the `LDAvis` package to view our intertopic distance map.
 
 ```{r}
-i <- 40
+i <- 150
 ```
 
 ```{r out.width = "600px", echo=F}
@@ -638,7 +671,7 @@ toLDAvis(df_stm, docs)
 
 # covariates
 out$meta$field = as.factor(out$meta$field)
-prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+prep <- estimateEffect(1:i ~ field + s(publication_year) + s(times_cited_all_databases) + s(impact_factor_without_journal_self_cites),
                        df_stm,
                        meta = out$meta,
                        uncertainty = "Global")
@@ -717,10 +750,10 @@ topic_top_docs <- as_tibble(topic_thoughts$index) %>%
   mutate(topic = str_remove(topic, "topic_")) 
 
 table_final <- topic_full_table %>%
-  left_join(topic_top_docs) %>%
+  left_join(topic_top_docs %>% mutate(topic = as.factor(topic))) %>%
   select(-doc_index) %>%
   kable() %>%
-  kable_classic("striped", full_width = F)
+  kable_styling()
 table_final
 
 # network
@@ -814,7 +847,7 @@ toLDAvis(df_stm, docs)
 
 # covariates
 out$meta$field = as.factor(out$meta$field)
-prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+prep <- estimateEffect(1:i ~ field + s(publication_year) + s(times_cited_all_databases) + s(impact_factor_without_journal_self_cites),
                        df_stm,
                        meta = out$meta,
                        uncertainty = "Global")
@@ -990,7 +1023,7 @@ toLDAvis(df_stm, docs)
 
 # covariates
 out$meta$field = as.factor(out$meta$field)
-prep <- estimateEffect(1:i ~ field + s(months_since_first_pub),
+prep <- estimateEffect(1:i ~ prevalence = ~ field + s(publication_year) + s(times_cited_all_databases) + s(impact_factor_without_journal_self_cites),
                        df_stm,
                        meta = out$meta,
                        uncertainty = "Global")
