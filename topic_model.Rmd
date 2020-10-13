@@ -1,0 +1,201 @@
+---
+title: "topic model - cpa"
+author: "Václav Ocelík"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+h1.title {
+  font-size: 38px;
+  text-align: center;
+}
+h4.author { 
+  font-size: 18px;
+  text-align: center;
+}
+h4.date { 
+  font-size: 18px;
+  text-align: center;
+</style>
+
+```{r setup, include=FALSE, message = F, echo = F}
+knitr::opts_chunk$set(echo = T, message = F, error = F, dpi = 400,
+                      fig.width = 8, fig.height = 6, warning = F)
+```
+
+# Libraries
+
+```{r}
+rm(list=ls())
+
+library(furrr)
+library(GGally)
+library(ggthemes)
+library(gridExtra)
+library(knitr)
+library(kableExtra)
+library(lubridate)
+library(network)
+library(readxl)
+library(scales)
+library(stm)
+library(tm)
+library(tidylo)
+library(tidytext)
+library(tidyverse)
+
+theme_set(theme_classic())
+```
+
+# Import data
+
+```{r}
+df <- do.call(rbind, lapply(Sys.glob("data/data_sept_2020/*.xls"), read_excel)) # make sure no other .xls files in target.
+```
+
+# Clean data
+
+```{r}
+df_clean <- df %>%
+  janitor::clean_names() %>%
+  select(authors, `article_title`, `source_title`, abstract,
+         `publication_year`, `times_cited_all_databases`,
+         `author_keywords`, `keywords_plus`, publication_date,
+         issn) %>%
+  filter(!is.na(`publication_year`),
+         !is.na(abstract)) %>%
+  mutate(id = row_number(), 
+         abstract_Length = str_length(abstract)) %>%
+  select(id, everything()) 
+```
+
+# Join journal data
+
+```{r}
+tbl <- list.files(pattern = "*.csv") %>%
+  map_df(~read.csv(.)) %>%
+  janitor::clean_names() %>%
+  select(x:x_6)
+
+colnames(tbl) <- as.character(as.vector(tbl[1,]))
+
+df_wos <- read_csv("data/wos-core_SSCI.csv") %>%
+  select(`Web of Science Categories`, ISSN) %>%
+  left_join(tbl) %>%
+  janitor::clean_names() %>%
+  filter(!is.na(full_journal_title))
+
+df_clean <- df_clean %>%
+  left_join(distinct(df_wos)) 
+
+df_clean <- df_clean %>%
+  filter(!is.na(web_of_science_categories)) %>%
+  mutate(field = str_remove(web_of_science_categories, ' [.]*[ |.].*'),
+         field = str_remove(field, '[,].*'))
+
+rm(df_wos, tbl)
+
+fields <- df_clean %>%
+  mutate(field = ifelse(field == "International Relations" | field == "Public Administration", "Political Science", field),
+         field = ifelse(field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
+  count(field, sort = T) %>%
+  top_n(7) %>%
+  pull(field)
+
+df_final <- df_clean %>%
+  mutate(field = ifelse(field =="International Relations" | field == "Public Administration", "Political Science", field),
+         field = ifelse(field == "Communication" | field == "Sociology" | field == "Anthropology" | field == "Cultural Studies", "Social Sciences", field)) %>%
+  filter(field %in% fields) %>%
+  filter(!is.na(full_journal_title)) %>%
+  mutate(total_cites = str_remove(total_cites,"[,]"),
+         total_cites = as.numeric(total_cites),
+         journal_impact_factor = as.double(journal_impact_factor),
+         impact_factor_without_journal_self_cites = as.double(impact_factor_without_journal_self_cites),
+         x5_year_impact_factor = as.double(x5_year_impact_factor), # 459 NAs
+         eigenfactor_score = as.double(eigenfactor_score)) 
+
+
+df_final <- df_final %>%
+  mutate(length = str_length(abstract)) %>%
+  filter(length < 3000, 
+         length > 500) %>%
+  select(-length)
+```
+
+# Determine which words to remove
+
+```{r}
+df_words <- df_final %>%
+  unnest_tokens(word, abstract) %>%
+  anti_join(stop_words) %>%
+  select(id, word) %>%
+  group_by(word) %>%
+  mutate(word_count = n()) %>%
+  ungroup() %>%
+  distinct() %>%
+  group_by(word) %>%
+  mutate(total_docs_occuring = n()) %>%
+  ungroup() %>%
+  select(word, word_count, total_docs_occuring) %>%
+  distinct() 
+
+df_words %>%
+  ggplot(aes(total_docs_occuring)) +
+  geom_boxplot() +
+  coord_flip() +
+  scale_x_log10()
+```
+
+# STM
+
+```{r}
+df_prep <- textProcessor(df_final$abstract,
+                         metadata = df_final,
+                         verbose = T,
+                         onlycharacter = T,
+                         stem = T,
+                         removepunctuation = T,
+                         removenumbers = T)
+```
+
+```{r}
+out <- prepDocuments(df_prep$documents,
+                     df_prep$vocab,
+                     df_prep$meta,
+                     verbose = F,
+                     lower.thresh = 2,
+                     upper.thresh = 3000) 
+
+docs <- out$documents
+vocab <- out$vocab 
+meta <- out$meta
+
+df_words %>%
+  left_join(as_tibble(out$words.removed) %>% rename(word = value) %>% mutate(removed = T)) %>%
+  filter(removed == T) %>%
+  arrange(desc(total_docs_occuring)) %>%
+  select(-removed) %>%
+  head(20) %>%
+  kable(caption = "Top 20 words removed due to (in)frequency") %>%
+  kable_classic("striped", full_width = F)
+```
+
+```{r}
+k <- c(10, 20, 40, 50, 60, 70, 80, 90, 100, 150, 150, 175, 200)
+```
+
+```{r}
+plan(multicore)
+
+many_models <- tibble(K = k) %>%
+  mutate(topic_model = future_map(K, ~stm(documents = out$documents, vocab = out$vocab, 
+                                          data = out$meta, K = . ,
+                                          prevalence = ~ field + s(publication_year) + s(times_cited_all_databases) + s(impact_factor_without_journal_self_cites), verbose = FALSE)))
+```
+
